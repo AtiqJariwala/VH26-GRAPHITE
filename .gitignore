@@ -1,0 +1,32 @@
+@"
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Project-specific (exclude these files)
+HOW_TO_TEST.md
+PROJECT_SUMMARY.md
+QUICKSTART.md
+TEST_RESULTS.md
+test_samples/
+
+# OS
+.DS_Store
+Thumbs.db
+"@ | Out-File -FilePath .gitignore -Encoding utf8
