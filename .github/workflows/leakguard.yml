@@ -27,10 +27,7 @@ jobs:
     - name: Run LeakGuard scan
       run: |
         echo "🔍 Running LeakGuard resource leak detection..."
-        # Exclude test fixtures with intentional leaks
-        python -m leakguard.cli scan . --fail-on=likely 2>&1 | grep -v "tests/fixtures/leaky" || true
-        
-        # Scan only source code (exclude test fixtures)
+        # Scan only source directories, exclude test fixtures
         python -m leakguard.cli scan leakguard/ dashboard/ --fail-on=likely
         EXIT_CODE=$?
         
