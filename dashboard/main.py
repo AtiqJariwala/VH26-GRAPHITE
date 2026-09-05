@@ -224,4 +224,19 @@ async def update_settings(settings: dict):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import socket
+    
+    # Try ports 8000-8010 until we find one available
+    port = 8000
+    for attempt_port in range(8000, 8011):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('127.0.0.1', attempt_port))
+            sock.close()
+            port = attempt_port
+            break
+        except OSError:
+            continue
+    
+    print(f"\n🚀 LeakGuard Dashboard starting on http://127.0.0.1:{port}\n")
+    uvicorn.run(app, host="127.0.0.1", port=port)
