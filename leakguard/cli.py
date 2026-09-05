@@ -62,7 +62,6 @@ def scan_command(args):
             print(f"No Python files found in {path}")
         return 0
     
-    # Header
     if HAS_RICH and console:
         console.print()
         console.print(Panel.fit(

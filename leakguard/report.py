@@ -67,7 +67,7 @@ class Report:
         
         if not self.findings:
             console.print(Panel.fit(
-                "[bold green]✓ No resource leaks detected[/bold green]",
+                "[bold green]No resource leaks detected[/bold green]",
                 border_style="green"
             ))
             return
@@ -75,7 +75,7 @@ class Report:
         # Header
         console.print()
         console.print(Panel.fit(
-            f"[bold red]⚠ Found {len(self.findings)} potential resource leak(s)[/bold red]",
+            f"[bold red]Found {len(self.findings)} potential resource leak(s)[/bold red]",
             border_style="red"
         ))
         console.print()
