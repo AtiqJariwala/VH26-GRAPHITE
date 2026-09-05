@@ -1,0 +1,26 @@
+# Pre-commit hook configuration for LeakGuard
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: local
+    hooks:
+      - id: leakguard
+        name: LeakGuard Resource Leak Detector
+        entry: python -m leakguard.cli scan
+        language: system
+        types: [python]
+        pass_filenames: true
+        args: ["--fail-on=likely"]
+        # Only run on staged Python files
+        files: \.py$
+
+# To install this hook, run:
+#   pip install pre-commit
+#   pre-commit install
+#
+# To run manually:
+#   pre-commit run leakguard --all-files
+#
+# Configuration options:
+# - Change args: ["--fail-on=likely"] to ["--fail-on=definitely"] for stricter checking
+# - Change args: ["--fail-on=likely"] to ["--fail-on=possible"] for more conservative checking

@@ -1,0 +1,42 @@
+name: LeakGuard Resource Leak Detection
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  leakguard:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install LeakGuard
+      run: |
+        pip install -e .
+    
+    - name: Run LeakGuard scan
+      run: |
+        leakguard scan . --fail-on=likely
+      continue-on-error: false
+    
+    - name: Report results
+      if: failure()
+      run: |
+        echo "❌ LeakGuard detected resource leaks!"
+        echo "Review the output above for details."
+        exit 1
+
+# Configuration notes:
+# - Adjust --fail-on level (definitely/likely/possible) based on your team's needs
+# - Default is 'likely' which balances false positives and real issues
+# - For new projects or strict enforcement, use --fail-on=possible
+# - For legacy codebases, start with --fail-on=definitely
