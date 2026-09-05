@@ -1,0 +1,440 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeakGuard Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .danger { color: #e74c3c; }
+        .warning { color: #f39c12; }
+        .info { color: #3498db; }
+        .success { color: #27ae60; }
+
+        .scan-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .scan-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .scan-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .scan-button:active {
+            transform: scale(0.95);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .results-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .results-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-definitely { background: #fee; color: #c00; }
+        .badge-likely { background: #ffeaa7; color: #e17055; }
+        .badge-possible { background: #dfe6e9; color: #636e72; }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #eee;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .file-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item.error {
+            border-left-color: #e74c3c;
+        }
+
+        .file-item.success {
+            border-left-color: #27ae60;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        #accuracyChart {
+            width: 100%;
+            height: 300px;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            font-size: 0.9em;
+        }
+
+        .status-icon {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ LeakGuard Dashboard</h1>
+            <p class="tagline">Professional Resource Leak Detection for Python</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Files Scanned</div>
+                <div class="stat-value info" id="filesScanned">20</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Leaks Detected</div>
+                <div class="stat-value danger" id="leaksDetected">9</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Detection Rate</div>
+                <div class="stat-value success" id="detectionRate">90%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Build Status</div>
+                <div class="stat-value warning" id="buildStatus">⚠️ BLOCKED</div>
+            </div>
+        </div>
+
+        <div class="scan-section">
+            <h2 style="margin-bottom: 20px;">🔍 Scan Your Code</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Select a directory or file to scan for resource leaks. LeakGuard will analyze your Python code and detect files, sockets, databases, and locks that aren't properly closed.
+            </p>
+            <button class="scan-button" onclick="runScan()">Start Scan</button>
+            
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+
+            <div class="file-list" id="fileList" style="display: none;">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2 style="margin-bottom: 20px;">📊 Detection Accuracy</h2>
+            <canvas id="accuracyChart"></canvas>
+        </div>
+
+        <div class="scan-section">
+            <h2 style="margin-bottom: 20px;">📋 Recent Scan Results</h2>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Line</th>
+                        <th>Resource Type</th>
+                        <th>Severity</th>
+                        <th>Issue</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <tr>
+                        <td>01_simple_file_leak.py</td>
+                        <td>12</td>
+                        <td>file</td>
+                        <td><span class="badge badge-definitely">DEFINITELY</span></td>
+                        <td>No close() found on any path</td>
+                    </tr>
+                    <tr>
+                        <td>02_early_return_leak.py</td>
+                        <td>18</td>
+                        <td>file</td>
+                        <td><span class="badge badge-likely">LIKELY</span></td>
+                        <td>Early return before close()</td>
+                    </tr>
+                    <tr>
+                        <td>04_socket_leak.py</td>
+                        <td>25</td>
+                        <td>socket</td>
+                        <td><span class="badge badge-definitely">DEFINITELY</span></td>
+                        <td>Socket never closed</td>
+                    </tr>
+                    <tr>
+                        <td>05_database_leak.py</td>
+                        <td>8</td>
+                        <td>database</td>
+                        <td><span class="badge badge-definitely">DEFINITELY</span></td>
+                        <td>DB connection never closed</td>
+                    </tr>
+                    <tr>
+                        <td>06_reassignment_leak.py</td>
+                        <td>14</td>
+                        <td>file</td>
+                        <td><span class="badge badge-possible">POSSIBLE</span></td>
+                        <td>Variable reassigned</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>LeakGuard v0.1.0 | Built with ❤️ for safer Python code</p>
+            <p>GitHub: <a href="#" style="color: white;">VH26-GRAPHITE</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Simulate scan process
+        function runScan() {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const fileList = document.getElementById('fileList');
+            
+            progressBar.style.display = 'block';
+            fileList.style.display = 'block';
+            fileList.innerHTML = '<div class="loader"></div>';
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                progressFill.style.width = progress + '%';
+                progressFill.textContent = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    displayResults();
+                }
+            }, 200);
+        }
+
+        function displayResults() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = `
+                <div class="file-item success">
+                    <span><strong>01_with_statement.py</strong> - No leaks detected</span>
+                    <span style="color: #27ae60;">✓ PASS</span>
+                </div>
+                <div class="file-item error">
+                    <span><strong>01_simple_file_leak.py</strong> - Resource leak at line 12</span>
+                    <span style="color: #e74c3c;">✗ FAIL</span>
+                </div>
+                <div class="file-item error">
+                    <span><strong>02_early_return_leak.py</strong> - Early return leak at line 18</span>
+                    <span style="color: #e74c3c;">✗ FAIL</span>
+                </div>
+                <div class="file-item success">
+                    <span><strong>02_explicit_close.py</strong> - No leaks detected</span>
+                    <span style="color: #27ae60;">✓ PASS</span>
+                </div>
+                <div class="file-item error">
+                    <span><strong>04_socket_leak.py</strong> - Socket leak at line 25</span>
+                    <span style="color: #e74c3c;">✗ FAIL</span>
+                </div>
+            `;
+            
+            // Update stats
+            document.getElementById('leaksDetected').textContent = '9';
+            document.getElementById('buildStatus').innerHTML = '❌ BLOCKED';
+            document.getElementById('buildStatus').className = 'stat-value danger';
+        }
+
+        // Simple chart simulation (would use Chart.js in production)
+        window.onload = function() {
+            const canvas = document.getElementById('accuracyChart');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 300;
+            
+            // Draw simple bar chart
+            const bars = [
+                { label: 'Clean Files\nCorrectly Passed', value: 9, color: '#27ae60' },
+                { label: 'Leaky Files\nCorrectly Detected', value: 9, color: '#e74c3c' },
+                { label: 'False Positives', value: 1, color: '#f39c12' },
+                { label: 'False Negatives', value: 1, color: '#3498db' }
+            ];
+            
+            const barWidth = canvas.width / bars.length - 40;
+            const maxValue = 10;
+            
+            bars.forEach((bar, index) => {
+                const x = index * (canvas.width / bars.length) + 20;
+                const height = (bar.value / maxValue) * (canvas.height - 60);
+                const y = canvas.height - height - 40;
+                
+                ctx.fillStyle = bar.color;
+                ctx.fillRect(x, y, barWidth, height);
+                
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                
+                const lines = bar.label.split('\n');
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, x + barWidth / 2, canvas.height - 20 + (i * 15));
+                });
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText(bar.value, x + barWidth / 2, y + height / 2);
+            });
+        };
+    </script>
+</body>
+</html>
