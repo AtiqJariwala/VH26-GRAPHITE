@@ -32,6 +32,9 @@ class ResourceState:
     
     passed_to_function: Optional[str] = None
     
+    # Track paths with early returns
+    early_return_paths: Set[str] = field(default_factory=set)
+    
     def mark_closed(self, path="default"):
         self.path_states[path] = PathStatus.CLOSED
     
@@ -57,6 +60,13 @@ class ResourceState:
         
         if PathStatus.OWNERSHIP_TRANSFERRED in self.path_states.values():
             return False, "transferred", "ownership transferred to safe function"
+        
+        # Check for early returns before close
+        unclosed_return_paths = [p for p in self.early_return_paths 
+                                  if self.path_states.get(p, PathStatus.OPEN) == PathStatus.OPEN]
+        if unclosed_return_paths:
+            paths_desc = ", ".join(unclosed_return_paths)
+            return True, "definitely", f"early return on path(s) {paths_desc} without close()"
         
         # Warning cases
         if self.reassigned:
@@ -140,6 +150,13 @@ class ControlFlowTracker:
         for resource in self.resources:
             if branch_name not in resource.path_states:
                 resource.path_states[branch_name] = PathStatus.OPEN
+    
+    def mark_early_return(self, path: str):
+        """Mark that there's an early return on this path without closing resources."""
+        for resource in self.resources:
+            # Only mark if resource is still open on this path
+            if resource.path_states.get(path, PathStatus.OPEN) == PathStatus.OPEN:
+                resource.early_return_paths.add(path)
     
     def get_leaked_resources(self) -> List[ResourceState]:
         leaked = []

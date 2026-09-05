@@ -23,10 +23,13 @@ from leakguard.analyzer import analyze_file
 from leakguard.confidence import Confidence
 
 app = FastAPI(title="LeakGuard Dashboard")
-templates = Jinja2Templates(directory="dashboard/templates")
+
+# Get absolute paths relative to this file
+BASE_DIR = Path(__file__).parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # Database connection
-DB_PATH = Path("dashboard/db/scans.db")
+DB_PATH = BASE_DIR / "db" / "scans.db"
 
 def get_db():
     """Get database connection"""
@@ -76,9 +79,11 @@ init_db()
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index():
     """Main dashboard page"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Read and serve the HTML file directly to avoid Jinja2 compatibility issues
+    html_file = BASE_DIR / "templates" / "index.html"
+    return HTMLResponse(content=html_file.read_text(encoding='utf-8'))
 
 
 @app.get("/api/scans")

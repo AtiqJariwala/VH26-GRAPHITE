@@ -9,9 +9,10 @@ repos:
         entry: python -m leakguard.cli scan
         language: system
         types: [python]
-        pass_filenames: true
-        args: ["--fail-on=likely"]
-        # Only run on staged Python files
+        pass_filenames: false
+        args: ["."]
+        additional_dependencies: []
+        # Only run on Python files
         files: \.py$
 
 # To install this hook, run:
@@ -22,5 +23,10 @@ repos:
 #   pre-commit run leakguard --all-files
 #
 # Configuration options:
-# - Change args: ["--fail-on=likely"] to ["--fail-on=definitely"] for stricter checking
-# - Change args: ["--fail-on=likely"] to ["--fail-on=possible"] for more conservative checking
+# - The hook scans the entire repository (pass_filenames: false, args: ["."])
+# - It will FAIL and BLOCK the commit if leaks are found at or above 'likely' confidence
+# - The default threshold in cli.py is 'likely' - modify leakguard/cli.py to change
+#
+# Exit behavior:
+# - Exit code 0 = no leaks found, commit proceeds
+# - Exit code 1 = leaks found, commit is BLOCKED

@@ -16,6 +16,7 @@ except ImportError:
 from .analyzer import analyze_file
 from .confidence import Confidence
 from .report import Report
+from .config import load_config
 
 
 console = Console() if HAS_RICH else None
@@ -46,6 +47,12 @@ def scan_command(args):
             print(f"Error: Path does not exist: {path}", file=sys.stderr)
         return 1
     
+    # Load configuration
+    config = load_config(path if path.is_dir() else path.parent)
+    
+    # CLI arg overrides config file
+    threshold = args.fail_on if args.fail_on else config.fail_on
+    
     files = find_python_files(path)
     
     if not files:
@@ -60,12 +67,14 @@ def scan_command(args):
         console.print()
         console.print(Panel.fit(
             f"[bold cyan]LeakGuard Scanner[/bold cyan]\n"
-            f"Scanning {len(files)} Python file(s)...",
+            f"Scanning {len(files)} Python file(s)...\n"
+            f"Fail threshold: [bold]{threshold.value}[/bold]",
             border_style="cyan"
         ))
         console.print()
     else:
-        print(f"\nScanning {len(files)} Python file(s)...\n")
+        print(f"\nScanning {len(files)} Python file(s)...")
+        print(f"Fail threshold: {threshold.value}\n")
     
     # Analyze files with progress bar
     report = Report()
@@ -95,7 +104,6 @@ def scan_command(args):
     report.print_summary()
     
     # Determine exit code
-    threshold = args.fail_on
     if report.has_failures(threshold):
         if HAS_RICH and console:
             console.print(Panel.fit(
@@ -126,9 +134,9 @@ def main():
     scan_parser.add_argument(
         "--fail-on",
         type=lambda s: Confidence.from_string(s),
-        default=Confidence.LIKELY,
+        default=None,
         choices=list(Confidence),
-        help="Confidence level at which to fail the build (default: likely)"
+        help="Confidence level at which to fail the build (default: from config or 'likely')"
     )
     
     args = parser.parse_args()

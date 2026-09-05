@@ -92,7 +92,10 @@ class ResourceAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
     
     def visit_Return(self, node: ast.Return):
-        pass
+        """Track early returns - resources not closed before return are leaked."""
+        # Mark all currently open resources as potentially leaked on this path
+        self.tracker.mark_early_return(self.tracker.current_path)
+        self.generic_visit(node)
     
     def visit_If(self, node: ast.If):
         """If/else branching."""
@@ -113,26 +116,36 @@ class ResourceAnalyzer(ast.NodeVisitor):
         self.tracker.current_path = saved_path
     
     def visit_Try(self, node: ast.Try):
+        """Handle try/except/finally blocks with proper path tracking."""
         saved_path = self.tracker.current_path
         
-       
+        # Track resources closed in finally block separately
+        resources_before_finally = set(self.tracker._var_to_resource.keys())
+        
+        # Visit try block
         self.tracker.in_try_block = True
+        self.tracker.enter_branch("try_body")
         for stmt in node.body:
             self.visit(stmt)
         self.tracker.in_try_block = False
                
+        # Visit exception handlers
         for handler in node.handlers:
-            self.tracker.enter_branch(f"except_{handler.type.id if handler.type else 'all'}")
+            handler_name = f"except_{handler.type.id if handler.type else 'all'}"
+            self.tracker.enter_branch(handler_name)
             for stmt in handler.body:
                 self.visit(stmt)
         
+        # Visit finally block - resources closed here are closed on ALL paths
         if node.finalbody:        
             self.tracker.in_finally_block = True
             for stmt in node.finalbody:
                 self.visit(stmt)
             self.tracker.in_finally_block = False
         
+        # Visit else block (only runs if no exception)
         if node.orelse:
+            self.tracker.enter_branch("try_else")
             for stmt in node.orelse:
                 self.visit(stmt)
         

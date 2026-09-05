@@ -1,0 +1,25 @@
+# LeakGuard Configuration File Example
+#
+# Copy this file to .leakguard.toml in your project root
+# Or add a [tool.leakguard] section to your pyproject.toml
+
+# Confidence level at which to fail builds
+# Options: "definitely", "likely", "possible"
+# Default: "likely"
+fail-on = "likely"
+
+# Patterns to ignore (glob patterns)
+# Files matching these patterns will not be scanned
+ignore-patterns = [
+    "tests/*",
+    "build/*",
+    "*.egg-info/*",
+    "__pycache__/*"
+]
+
+# Functions known to take ownership of resources
+# Resources passed to these functions are considered safely transferred
+safe-transfer-functions = [
+    "contextlib.closing",
+    "weakref.finalize"
+]
