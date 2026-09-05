@@ -8,13 +8,31 @@
 ![Code Quality](https://img.shields.io/badge/code%20quality-A-brightgreen.svg)
 ![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
 
-**A Python-only static resource-leak detector for CI/CD pipelines**
+**A production-ready Python static resource-leak detector for CI/CD pipelines**
 
 LeakGuard uses AST analysis and lightweight control-flow tracking to find resources (files, sockets, database connections, locks) that are acquired but never released.
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Demo](#-demo) • [Architecture](#%EF%B8%8F-architecture) • [Documentation](#-test-results-on-fixtures)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Dashboard](#-dashboard) • [CI/CD](#-cicd-integration)
 
 </div>
+
+---
+
+## 🚀 **PRODUCTION-READY VERSION**
+
+**📖 Complete Setup Guide:** See [`FINAL_SETUP_GUIDE.md`](FINAL_SETUP_GUIDE.md) for:
+- Detailed installation instructions
+- Dashboard setup and usage
+- CI/CD configuration (pre-commit + GitHub Actions)
+- Configuration file options
+- Troubleshooting guide
+
+**⚡ Quick Start:**
+```bash
+pip install -e .
+leakguard scan .
+python dashboard/main.py  # Dashboard at http://127.0.0.1:8000
+```
 
 ---
 
@@ -22,6 +40,7 @@ LeakGuard uses AST analysis and lightweight control-flow tracking to find resour
 
 - [Demo](#-demo)
 - [Features](#-features)
+- [Dashboard](#-dashboard)
 - [Architecture](#%EF%B8%8F-architecture)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
@@ -41,11 +60,20 @@ LeakGuard uses AST analysis and lightweight control-flow tracking to find resour
 ```bash
 $ leakguard scan my_code.py
 
-Scanning 1 Python file(s)...
+╭──────────────────────────────╮
+│ LeakGuard Scanner            │
+│ Scanning 1 Python file(s)... │
+╰──────────────────────────────╯
+
+╭──────────────────────────────────────╮
+│ ⚠ Found 1 potential resource leak(s) │
+╰──────────────────────────────────────╯
 
 [LIKELY LEAK] my_code.py:15
   Resource: file (open('data.txt'))
   Resource opened but not closed on early return path at line 18
+
+Build failed: found leaks at or above 'likely' confidence level
 
 Summary:
   Definitely leaked: 0
@@ -83,7 +111,59 @@ def process_data():
 - **Context manager detection** - Recognizes safe `with` statement usage
 - **Confidence scoring** - Classifies findings as definitely/likely/possible leaked
 - **CI/CD ready** - Pre-commit hook and GitHub Actions support
-- **Zero dependencies** - Uses only Python standard library
+- **Zero dependencies** - Uses only Python standard library (dashboard optional)
+- **Professional Dashboard** - Web UI for visualization, scanning, and reporting
+
+---
+
+## 🎨 Dashboard
+
+LeakGuard includes a production-ready web dashboard built with FastAPI + Tailwind CSS.
+
+### Features:
+- ✅ **Automatic Scanning** - One-click scan trigger with project selection
+- ✅ **Real-time Filters** - Instant filtering by confidence, resource type, and path
+- ✅ **Expandable Details** - Click findings to see full explanations
+- ✅ **Scan History** - SQLite-backed persistent storage
+- ✅ **Settings Page** - Configure thresholds, ignore patterns, safe functions
+- ✅ **JSON Export** - Download scan results
+- ✅ **Professional UI** - Dark theme, sticky headers, loading states
+
+### Quick Start:
+
+```bash
+# Install dashboard dependencies
+pip install fastapi uvicorn jinja2
+
+# Seed demo data (optional)
+python dashboard/seed.py
+
+# Start dashboard
+python dashboard/main.py
+
+# Open browser to http://127.0.0.1:8000
+```
+
+### Dashboard Screenshots:
+
+**Main findings table with filters:**
+- Professional dark slate theme (#0f1419)
+- Muted teal accent (#14b8a6) for actions
+- Monospace fonts for code paths
+- Sticky table headers
+- Instant client-side filtering
+
+**New Scan modal:**
+- Enter project name and path
+- Runs real analyzer backend
+- Results appear automatically
+
+**Settings page:**
+- Configure fail-on threshold
+- Manage ignore patterns
+- Whitelist safe-transfer functions
+
+See [`FINAL_SETUP_GUIDE.md`](FINAL_SETUP_GUIDE.md) for complete dashboard documentation.
 
 ---
 
