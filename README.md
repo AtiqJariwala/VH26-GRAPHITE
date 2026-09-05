@@ -1,5 +1,39 @@
 # LeakGuard
 
+<div align="center">
+
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
+![Code Quality](https://img.shields.io/badge/code%20quality-A-brightgreen.svg)
+![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
+
+**A Python-only static resource-leak detector for CI/CD pipelines**
+
+LeakGuard uses AST analysis and lightweight control-flow tracking to find resources (files, sockets, database connections, locks) that are acquired but never released.
+
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Demo](#-demo) • [Architecture](#️-architecture) • [Documentation](#-test-results-on-fixtures)
+
+</div>
+
+---
+
+## 📚 Table of Contents
+
+- [Features](#-features)
+- [Demo](#-demo)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Architecture](#️-architecture)
+- [What It Detects](#-what-it-detects)
+- [Test Results](#-test-results-on-fixtures)
+- [CI/CD Integration](#-cicd-integration)
+- [Known Limitations](#-known-limitations)
+- [Extending LeakGuard](#-extending-leakguard)
+- [Contributing](#-contributing)
+
+---
+
 A Python-only static resource-leak detector for CI/CD pipelines. LeakGuard uses AST analysis and lightweight control-flow tracking to find resources (files, sockets, database connections, locks) that are acquired but never released.
 
 ## Features
