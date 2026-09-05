@@ -5,13 +5,14 @@ FastAPI server that wraps the existing LeakGuard analyzer
 and provides a clean web interface for viewing results.
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.requests import Request
 from pathlib import Path
 from typing import List, Optional
+from pydantic import BaseModel
 import json
 import sqlite3
 from datetime import datetime
@@ -119,8 +120,13 @@ async def get_scan(scan_id: int):
     return scan
 
 
+class ScanRequest(BaseModel):
+    project_name: str
+    file_paths: List[str]
+
+
 @app.post("/api/scan")
-async def run_scan(project_name: str, file_paths: List[str]):
+async def run_scan(request: ScanRequest):
     """
     Run LeakGuard analysis on provided files
     
@@ -128,26 +134,37 @@ async def run_scan(project_name: str, file_paths: List[str]):
     """
     findings = []
     
-    for file_path in file_paths:
+    # Handle directory path - scan all Python files in it
+    for file_path_str in request.file_paths:
         try:
-            path = Path(file_path)
-            if not path.exists():
+            path = Path(file_path_str)
+            
+            # If it's a directory, find all Python files
+            if path.is_dir():
+                py_files = list(path.rglob("*.py"))
+            elif path.is_file() and path.suffix == ".py":
+                py_files = [path]
+            else:
                 continue
                 
-            file_findings = analyze_file(path)
-            
-            for finding in file_findings:
-                findings.append({
-                    'file': str(finding.file_path),
-                    'line': finding.acquisition_line,
-                    'resource_type': finding.resource_type,
-                    'resource_expr': finding.resource_expr,
-                    'confidence': finding.confidence.value,
-                    'explanation': finding.explanation
-                })
+            for py_file in py_files:
+                try:
+                    file_findings = analyze_file(py_file)
+                    
+                    for finding in file_findings:
+                        findings.append({
+                            'file': str(finding.file_path),
+                            'line': finding.acquisition_line,
+                            'resource_type': finding.resource_type,
+                            'resource_expr': finding.resource_expr,
+                            'confidence': finding.confidence.value,
+                            'explanation': finding.explanation
+                        })
+                except Exception as e:
+                    print(f"Error analyzing {py_file}: {e}")
+                    
         except Exception as e:
-            # Log but continue with other files
-            print(f"Error analyzing {file_path}: {e}")
+            print(f"Error processing path {file_path_str}: {e}")
     
     # Count by confidence
     definitely_count = sum(1 for f in findings if f['confidence'] == 'definitely')
@@ -158,7 +175,8 @@ async def run_scan(project_name: str, file_paths: List[str]):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT value FROM settings WHERE key = 'fail_on'")
-    fail_on = cursor.fetchone()[0]
+    row = cursor.fetchone()
+    fail_on = row[0] if row else 'likely'
     
     passed = True
     if fail_on == 'definitely' and definitely_count > 0:
@@ -174,9 +192,9 @@ async def run_scan(project_name: str, file_paths: List[str]):
                           definitely_count, likely_count, possible_count, passed, findings_json)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        project_name,
+        request.project_name,
         datetime.now().isoformat(),
-        len(file_paths),
+        len(request.file_paths),
         len(findings),
         definitely_count,
         likely_count,
