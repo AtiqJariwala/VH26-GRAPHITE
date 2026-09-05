@@ -1,0 +1,321 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeakGuard Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['Monaco', 'Consolas', 'monospace']
+                    },
+                    colors: {
+                        slate: {
+                            850: '#1a202e',
+                            950: '#0f1419'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        
+        /* Clean professional scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Sticky table header */
+        .findings-table thead { position: sticky; top: 0; z-index: 10; }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-200">
+    
+    <!-- Top bar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-6">
+            <h1 class="text-xl font-semibold text-white">LeakGuard</h1>
+            <span class="text-slate-500 text-sm">Python Resource Leak Detection</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="showNewScanModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded transition">
+                New Scan
+            </button>
+            <button onclick="showSettings()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded transition">
+                Settings
+            </button>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-57px)]">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 border-r border-slate-800 overflow-y-auto">
+            <nav class="p-4 space-y-1">
+                <a href="#" onclick="showView('scans'); return false;" 
+                   class="nav-item block px-3 py-2 text-sm font-medium text-white bg-slate-800 rounded">
+                    Recent Scans
+                </a>
+                <a href="#" onclick="showView('limitations'); return false;" 
+                   class="nav-item block px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded transition">
+                    Limitations
+                </a>
+            </nav>
+            
+            <div class="px-4 py-6 border-t border-slate-800 mt-4">
+                <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Scan History</h3>
+                <div id="scanHistoryList" class="space-y-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <main class="flex-1 overflow-y-auto">
+            
+            <!-- Scans view -->
+            <div id="scansView" class="p-6">
+                
+                <!-- Summary strip -->
+                <div id="summaryStrip" class="grid grid-cols-4 gap-4 mb-6">
+                    <!-- Will be populated by JS -->
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 mb-4">
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Confidence</label>
+                            <select id="filterConfidence" onchange="applyFilters()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded px-3 py-2 focus:outline-none focus:border-teal-600">
+                                <option value="">All</option>
+                                <option value="definitely">Definitely</option>
+                                <option value="likely">Likely</option>
+                                <option value="possible">Possible</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Resource Type</label>
+                            <select id="filterResource" onchange="applyFilters()" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded px-3 py-2 focus:outline-none focus:border-teal-600">
+                                <option value="">All</option>
+                                <option value="file">File</option>
+                                <option value="socket">Socket</option>
+                                <option value="database">Database</option>
+                                <option value="lock">Lock</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-slate-400 mb-1">File path contains</label>
+                            <input type="text" id="filterPath" oninput="applyFilters()" placeholder="e.g., tests/" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded px-3 py-2 focus:outline-none focus:border-teal-600">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Findings table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+                    <table class="findings-table w-full text-sm">
+                        <thead class="bg-slate-850 border-b border-slate-800">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Severity</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">File</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Line</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Resource</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Issue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="findingsTableBody" class="divide-y divide-slate-800">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                    
+                    <!-- Empty state -->
+                    <div id="emptyState" class="hidden p-12 text-center">
+                        <p class="text-slate-500">No findings to display. Run a scan to get started.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Limitations view -->
+            <div id="limitationsView" class="hidden p-6 max-w-4xl">
+                <h2 class="text-2xl font-semibold text-white mb-4">Known Limitations</h2>
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-6 space-y-4 text-slate-300 leading-relaxed">
+                    <p class="text-sm">LeakGuard is an MVP static analyzer with intentional trade-offs. Here's what it cannot do:</p>
+                    
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">1. Inter-procedural Analysis</h3>
+                        <p class="text-sm">We don't track resources across function boundaries. If you pass a file handle to another function, we can't tell if that function closes it.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">2. Object-Level Resources</h3>
+                        <p class="text-sm">Only local variables are tracked. Resources stored in class instances or collections are not analyzed.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">3. Implicit Exception Paths</h3>
+                        <p class="text-sm">We detect explicit try/except blocks, but cannot predict which function calls might raise exceptions.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-white mb-2">4. Complex Control Flow</h3>
+                        <p class="text-sm">Loops with breaks/continues and nested exception handlers are not fully analyzed.</p>
+                    </div>
+                    
+                    <p class="text-sm text-slate-500 italic">These limitations are documented for transparency. We prioritize low false positives over exhaustive detection.</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let currentFindings = [];
+        let allFindings = [];
+        
+        // Load scan history on page load
+        loadScanHistory();
+        
+        async function loadScanHistory() {
+            const response = await fetch('/api/scans');
+            const data = await response.json();
+            
+            const list = document.getElementById('scanHistoryList');
+            list.innerHTML = data.scans.slice(0, 10).map(scan => `
+                <button onclick="loadScan(${scan.id})" class="w-full text-left px-3 py-2 text-xs rounded hover:bg-slate-800 transition ${scan.passed ? 'text-green-500' : 'text-red-400'}">
+                    <div class="font-medium truncate">${scan.project_name}</div>
+                    <div class="text-slate-500">${scan.total_findings} findings</div>
+                </button>
+            `).join('');
+        }
+        
+        async function loadScan(scanId) {
+            const response = await fetch(`/api/scans/${scanId}`);
+            const scan = await response.json();
+            
+            allFindings = scan.findings;
+            currentFindings = allFindings;
+            
+            // Update summary
+            updateSummary(scan);
+            renderFindings();
+        }
+        
+        function updateSummary(scan) {
+            const strip = document.getElementById('summaryStrip');
+            strip.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Total Findings</div>
+                    <div class="text-2xl font-semibold text-white">${scan.total_findings}</div>
+                </div>
+                <div class="bg-slate-900 border ${scan.definitely_count > 0 ? 'border-red-900' : 'border-slate-800'} rounded-lg p-4">
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Definitely</div>
+                    <div class="text-2xl font-semibold ${scan.definitely_count > 0 ? 'text-red-400' : 'text-slate-600'}">${scan.definitely_count}</div>
+                </div>
+                <div class="bg-slate-900 border ${scan.likely_count > 0 ? 'border-amber-900' : 'border-slate-800'} rounded-lg p-4">
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Likely</div>
+                    <div class="text-2xl font-semibold ${scan.likely_count > 0 ? 'text-amber-400' : 'text-slate-600'}">${scan.likely_count}</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Build Status</div>
+                    <div class="text-2xl font-semibold ${scan.passed ? 'text-green-500' : 'text-red-400'}">${scan.passed ? 'PASS' : 'FAIL'}</div>
+                </div>
+            `;
+        }
+        
+        function renderFindings() {
+            const tbody = document.getElementById('findingsTableBody');
+            const empty = document.getElementById('emptyState');
+            
+            if (currentFindings.length === 0) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            
+            tbody.innerHTML = currentFindings.map(finding => {
+                const confidenceBadge = {
+                    'definitely': '<span class="px-2 py-1 text-xs font-medium bg-red-900/30 text-red-400 rounded">DEFINITELY</span>',
+                    'likely': '<span class="px-2 py-1 text-xs font-medium bg-amber-900/30 text-amber-400 rounded">LIKELY</span>',
+                    'possible': '<span class="px-2 py-1 text-xs font-medium bg-slate-700 text-slate-400 rounded">POSSIBLE</span>'
+                }[finding.confidence];
+                
+                return `
+                    <tr class="hover:bg-slate-850 transition">
+                        <td class="px-4 py-3">${confidenceBadge}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-teal-400">${finding.file}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-400">${finding.line}</td>
+                        <td class="px-4 py-3 text-xs">
+                            <div class="font-medium text-slate-300">${finding.resource_type}</div>
+                            <div class="text-slate-500 font-mono">${finding.resource_expr}</div>
+                        </td>
+                        <td class="px-4 py-3 text-xs text-slate-400">${finding.explanation}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function applyFilters() {
+            const confidence = document.getElementById('filterConfidence').value;
+            const resource = document.getElementById('filterResource').value;
+            const path = document.getElementById('filterPath').value.toLowerCase();
+            
+            currentFindings = allFindings.filter(f => {
+                if (confidence && f.confidence !== confidence) return false;
+                if (resource && f.resource_type !== resource) return false;
+                if (path && !f.file.toLowerCase().includes(path)) return false;
+                return true;
+            });
+            
+            renderFindings();
+        }
+        
+        function showView(view) {
+            document.getElementById('scansView').classList.add('hidden');
+            document.getElementById('limitationsView').classList.add('hidden');
+            
+            if (view === 'scans') {
+                document.getElementById('scansView').classList.remove('hidden');
+            } else if (view === 'limitations') {
+                document.getElementById('limitationsView').classList.remove('hidden');
+            }
+            
+            // Update nav highlighting
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-slate-800', 'text-white');
+                el.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+            });
+            event.target.classList.add('bg-slate-800', 'text-white');
+            event.target.classList.remove('text-slate-400');
+        }
+        
+        function showNewScanModal() {
+            // TODO: Implement modal for new scan
+            alert('New scan modal - to be implemented. For now, use the CLI to run scans.');
+        }
+        
+        function showSettings() {
+            // TODO: Implement settings modal
+            alert('Settings - to be implemented');
+        }
+        
+        // Load most recent scan on page load
+        setTimeout(() => {
+            fetch('/api/scans').then(r => r.json()).then(data => {
+                if (data.scans.length > 0) {
+                    loadScan(data.scans[0].id);
+                }
+            });
+        }, 500);
+    </script>
+
+</body>
+</html>
